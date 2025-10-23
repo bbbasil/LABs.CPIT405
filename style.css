@@ -1,0 +1,100 @@
+body {
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  background-color: white;
+  color: black;
+  margin: 40px;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+header {
+  margin-bottom: 20px;
+}
+
+h1 {
+  font-size: 2em;
+  font-weight: bold;
+}
+
+.controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+input, select, button {
+  font-size: 1em;
+  padding: 8px 12px;
+  border: 1px solid gray;
+  border-radius: 5px;
+}
+
+input {
+  width: 200px;
+}
+
+button {
+  background-color: steelblue;
+  color: white;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: royalblue;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+th, td {
+  text-align: left;
+  padding: 12px 16px;
+}
+
+th {
+  background-color: lightsteelblue;
+  cursor: pointer;
+}
+
+tr:nth-child(even) {
+  background-color: whitesmoke;
+}
+
+tr:hover {
+  background-color: lightgray;
+}
+
+.dark-mode {
+  background-color: black;
+  color: white;
+}
+
+.dark-mode th {
+  background-color: darkslategray;
+}
+
+.dark-mode tr:nth-child(even) {
+  background-color: dimgray;
+}
+
+.dark-mode button {
+  background-color: darkslateblue;
+}
+
+.dark-mode button:hover {
+  background-color: mediumslateblue;
+}
+
+#summary {
+  font-size: 1.1em;
+  font-weight: bold;
+  color: darkblue;
+  margin-top: 20px;
+}
+
+.dark-mode #summary {
+  color: gold;
+}
