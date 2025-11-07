@@ -1,100 +1,237 @@
-const players = [
-  { name: "Omar Al-Farouq", team: "KSA", points: 31.2, rebounds: 9.8, assists: 6.1 },
-  { name: "Khalid Al-Mansour", team: "UAE", points: 28.5, rebounds: 5.4, assists: 7.2 },
-  { name: "Yousef Al-Hassan", team: "EGY", points: 29.9, rebounds: 8.1, assists: 4.9 },
-  { name: "Tariq Al-Salem", team: "QAT", points: 26.7, rebounds: 6.3, assists: 5.5 },
-  { name: "Fahad Al-Omari", team: "JOR", points: 27.8, rebounds: 7.5, assists: 5.0 },
-];
+const ACCESS_KEY = "ZCd564sFTuzC9x8n7JDr9h6guE9hiHGeP2qkePribBk"
 
-const tableBody = document.querySelector("tbody");
-const searchInput = document.querySelector("input");
-const teamDropdown = document.querySelector("select");
-const darkModeToggle = document.querySelector("button");
-const tableHeaders = document.querySelectorAll("th");
+const el = (s) => document.querySelector(s)
+const grid = el("#grid")
+const statusEl = el("#status")
+const searchForm = el("#search-form")
+const searchInput = el("#search-input")
+const searchBtn = el("#search-btn")
+const btnXHR = el("#btn-xhr")
+const btnFetch = el("#btn-fetch")
+const btnAsync = el("#btn-async")
+const btnLoadMore = el("#load-more")
+const recentChipsEl = el("#recent-chips")
+const clearRecents = el("#clear-recents")
+const modal = el("#modal")
+const modalImg = el("#modal-img")
+const modalMeta = el("#modal-meta")
+const modalClose = el("#modal-close")
 
-const summaryContainer = document.createElement("div");
-summaryContainer.id = "summary";
-summaryContainer.style.marginTop = "20px";
-summaryContainer.style.fontWeight = "bold";
-document.body.appendChild(summaryContainer);
-
-function populateTeamDropdown() {
-  const uniqueTeams = ["All", ...new Set(players.map(p => p.team))];
-  teamDropdown.innerHTML = uniqueTeams
-    .map(team => `<option value="${team}">${team}</option>`)
-    .join("");
-}
-populateTeamDropdown();
-
-function renderTable(data) {
-  tableBody.innerHTML = "";
-  data.forEach(player => {
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${player.name}</td>
-      <td>${player.team}</td>
-      <td>${player.points}</td>
-      <td>${player.rebounds}</td>
-      <td>${player.assists}</td>
-    `;
-    tableBody.appendChild(row);
-  });
-  updateSummary(data);
+const state = {
+  method: "async",
+  query: "",
+  page: 1,
+  perPage: 12,
+  total: 0,
+  isLoading: false,
 }
 
-function updateSummary(data) {
-  if (data.length === 0) {
-    summaryContainer.textContent = "No players match your filters.";
-    return;
+const saveRecents = (list) => localStorage.setItem("recentSearches", JSON.stringify(list.slice(0, 10)))
+const loadRecents = () => JSON.parse(localStorage.getItem("recentSearches") || "[]")
+
+function setStatus(msg, kind = "info") {
+  statusEl.textContent = msg
+  statusEl.style.color = kind === "error" ? "red" : "gray"
+}
+
+function setLoading(value) {
+  state.isLoading = value
+  grid.setAttribute("aria-busy", String(value))
+  if (value) {
+    setStatus("Loading images…")
+    searchBtn.disabled = true
+    btnLoadMore.disabled = true
+    statusEl.insertAdjacentHTML("beforeend", ' <span class="spinner" aria-hidden="true"></span>')
+  } else {
+    searchBtn.disabled = false
+    btnLoadMore.disabled = false
   }
-  const avgPoints = (data.reduce((sum, p) => sum + p.points, 0) / data.length).toFixed(1);
-  const avgRebounds = (data.reduce((sum, p) => sum + p.rebounds, 0) / data.length).toFixed(1);
-  const avgAssists = (data.reduce((sum, p) => sum + p.assists, 0) / data.length).toFixed(1);
-  summaryContainer.textContent = `Averages — Points: ${avgPoints}, Rebounds: ${avgRebounds}, Assists: ${avgAssists}`;
 }
 
-function filterPlayers() {
-  const searchTerm = searchInput.value.toLowerCase();
-  const selectedTeam = teamDropdown.value;
-  const filteredPlayers = players.filter(player => {
-    const matchesName = player.name.toLowerCase().includes(searchTerm);
-    const matchesTeam = selectedTeam === "All" || player.team === selectedTeam;
-    return matchesName && matchesTeam;
-  });
-  renderTable(filteredPlayers);
+function buildURL(query, page = 1) {
+  const params = new URLSearchParams({
+    query,
+    page,
+    per_page: state.perPage,
+    client_id: ACCESS_KEY,
+  })
+  return `https://api.unsplash.com/search/photos?${params.toString()}`
 }
 
-darkModeToggle.addEventListener("click", () => {
-  document.body.classList.toggle("dark-mode");
-  darkModeToggle.textContent = document.body.classList.contains("dark-mode")
-    ? "Light Mode"
-    : "Dark Mode";
-});
+function activateMethodButton(active) {
+  [btnXHR, btnFetch, btnAsync].forEach((btn) => {
+    const isActive = btn === active
+    btn.classList.toggle("is-active", isActive)
+    btn.setAttribute("aria-pressed", String(isActive))
+  })
+}
 
-searchInput.addEventListener("input", filterPlayers);
-teamDropdown.addEventListener("change", filterPlayers);
+function cardTemplate(photo) {
+  const alt = photo.alt_description || "Unsplash photo"
+  const avatar = photo.user?.profile_image?.small || ""
+  const author = photo.user?.name || "Unknown"
+  const link = photo.links?.html || "#"
+  const likes = photo.likes ?? "—"
+  return `
+    <article class="card" data-full="${photo.urls?.regular}" data-alt="${alt}" data-credit="${author}" data-link="${link}">
+      <img class="card__img" src="${photo.urls?.small}" alt="${alt}" loading="lazy">
+      <div class="card__meta">
+        <div class="card__credit">
+          <img src="${avatar}" alt="">
+          <span class="truncate"><a href="${link}" target="_blank" rel="noopener">${author}</a></span>
+        </div>
+        <span>❤️ ${likes}</span>
+      </div>
+    </article>`
+}
 
-tableBody.addEventListener("mouseover", e => {
-  const row = e.target.closest("tr");
-  if (row) row.style.backgroundColor = "lightgray";
-});
-tableBody.addEventListener("mouseout", e => {
-  const row = e.target.closest("tr");
-  if (row) row.style.backgroundColor = "";
-});
+function renderPhotos(payload, { append = false } = {}) {
+  const photos = payload.results || []
+  state.total = payload.total || 0
+  const html = photos.map(cardTemplate).join("")
+  if (append) grid.insertAdjacentHTML("beforeend", html)
+  else grid.innerHTML = html
+  btnLoadMore.hidden = state.page * state.perPage >= state.total
+  setStatus(
+    state.total
+      ? `Showing ${Math.min(state.page * state.perPage, state.total)} of ${state.total} results for “${state.query}”.`
+      : `No results for “${state.query}”.`,
+    state.total ? "info" : "error"
+  )
+}
 
-let sortDirection = 1;
-tableHeaders.forEach(header => {
-  header.addEventListener("click", () => {
-    const key = header.textContent.toLowerCase();
-    if (["points", "rebounds", "assists"].includes(key)) {
-      const sortedPlayers = [...players].sort(
-        (a, b) => (a[key] - b[key]) * sortDirection
-      );
-      sortDirection *= -1;
-      renderTable(sortedPlayers);
-    }
-  });
-});
+// -------------------- Network Methods --------------------
+function requestXHR(url) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open("GET", url)
+    xhr.onload = () => (xhr.status >= 200 && xhr.status < 300
+      ? resolve(JSON.parse(xhr.responseText))
+      : reject(new Error(`XHR ${xhr.status}`)))
+    xhr.onerror = () => reject(new Error("Network error (XHR)"))
+    xhr.send()
+  })
+}
 
-renderTable(players);
+function requestFetch(url) {
+  return fetch(url)
+    .then((r) => {
+      if (!r.ok) throw new Error(`Fetch ${r.status}`)
+      return r.json()
+    })
+}
+
+async function requestAsync(url) {
+  const res = await fetch(url)
+  if (!res.ok) throw new Error(`Async ${res.status}`)
+  return res.json()
+}
+
+// -------------------- Main Controller --------------------
+async function runSearch({ append = false } = {}) {
+  const query = searchInput.value.trim() || "nature"
+  state.query = query
+  if (!query) return
+  setLoading(true)
+  const url = buildURL(query, state.page)
+  try {
+    let payload
+    if (state.method === "xhr") payload = await requestXHR(url)
+    if (state.method === "fetch") payload = await requestFetch(url)
+    if (state.method === "async") payload = await requestAsync(url)
+    renderPhotos(payload, { append })
+    bumpRecent(query)
+  } catch (err) {
+    console.error(err)
+    setStatus("Couldn’t fetch images. Check your Access Key and network, then try again.", "error")
+  } finally {
+    setLoading(false)
+  }
+}
+
+// -------------------- Recents --------------------
+function bumpRecent(q) {
+  const recents = loadRecents().filter((x) => x.toLowerCase() !== q.toLowerCase())
+  recents.unshift(q)
+  saveRecents(recents)
+  paintRecents()
+}
+
+function paintRecents() {
+  const recents = loadRecents()
+  recentChipsEl.innerHTML = recents.map((q) => `<button class="chip" data-q="${q}">${q}</button>`).join("")
+  clearRecents.disabled = recents.length === 0
+}
+
+// -------------------- Events --------------------
+searchForm.addEventListener("submit", (e) => {
+  e.preventDefault()
+  state.query = searchInput.value.trim()
+  state.page = 1
+  runSearch({ append: false })
+})
+
+btnLoadMore.addEventListener("click", () => {
+  state.page += 1
+  runSearch({ append: true })
+})
+
+btnXHR.addEventListener("click", () => {
+  state.method = "xhr"
+  activateMethodButton(btnXHR)
+  state.query = searchInput.value.trim() || "nature"
+  state.page = 1
+  runSearch()
+})
+
+btnFetch.addEventListener("click", () => {
+  state.method = "fetch"
+  activateMethodButton(btnFetch)
+  state.query = searchInput.value.trim() || "nature"
+  state.page = 1
+  runSearch()
+})
+
+btnAsync.addEventListener("click", () => {
+  state.method = "async"
+  activateMethodButton(btnAsync)
+  state.query = searchInput.value.trim() || "nature"
+  state.page = 1
+  runSearch()
+})
+
+recentChipsEl.addEventListener("click", (e) => {
+  const chip = e.target.closest(".chip")
+  if (!chip) return
+  searchInput.value = chip.dataset.q
+  state.query = chip.dataset.q
+  state.page = 1
+  runSearch({ append: false })
+})
+
+clearRecents.addEventListener("click", () => {
+  localStorage.removeItem("recentSearches")
+  paintRecents()
+})
+
+window.addEventListener("keydown", (e) => {
+  if (e.key === "/") { e.preventDefault(); searchInput.focus() }
+  if (e.key === "1") { state.method = "xhr"; activateMethodButton(btnXHR); runSearch() }
+  if (e.key === "2") { state.method = "fetch"; activateMethodButton(btnFetch); runSearch() }
+  if (e.key === "3") { state.method = "async"; activateMethodButton(btnAsync); runSearch() }
+})
+
+grid.addEventListener("click", (e) => {
+  const card = e.target.closest(".card")
+  if (!card) return
+  modalImg.src = card.dataset.full
+  modalImg.alt = card.dataset.alt
+  modalMeta.innerHTML = `Photo by <a href="${card.dataset.link}" target="_blank" rel="noopener">${card.dataset.credit}</a> on Unsplash`
+  modal.showModal()
+})
+
+modalClose.addEventListener("click", () => modal.close())
+modal.addEventListener("click", (e) => { if (e.target === modal) modal.close() })
+
+paintRecents()
+setStatus("Try “nature”, “mountains”, or “city”. Then toggle methods to compare.")

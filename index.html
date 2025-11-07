@@ -1,37 +1,42 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Player Stats Dashboard</title>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Unsplash Image Search — XHR • Fetch • Async/Await</title>
   <link rel="stylesheet" href="style.css">
+  <script src="script.js" defer></script>
 </head>
 <body>
-  <header>
-    <h1>Player Stats Dashboard</h1>
+  <header class="container">
+    <h1 class="headline">Unsplash Image Search</h1>
+    <form id="search-form" class="search" aria-label="Image search form">
+      <input id="search-input" class="search__input" type="text" placeholder="Search for images…" aria-label="Search term" autocomplete="off">
+      <button id="search-btn" class="btn btn--primary" type="submit" aria-label="Search">Search</button>
+    </form>
+    <nav class="toolbar" aria-label="Choose fetching method">
+      <button id="btn-xhr" class="btn btn--chip" aria-pressed="false">Use XHR</button>
+      <button id="btn-fetch" class="btn btn--chip" aria-pressed="false">Use Fetch</button>
+      <button id="btn-async" class="btn btn--chip is-active" aria-pressed="true">Use Async/Await</button>
+      <span class="hint">Shortcuts: <kbd>/</kbd> focus • <kbd>Enter</kbd> search • <kbd>1</kbd>/<kbd>2</kbd>/<kbd>3</kbd> toggle method</span>
+    </nav>
+    <div id="status" class="status" role="status" aria-live="polite"></div>
+    <section class="recents" aria-label="Recent searches">
+      <div id="recent-chips" class="recents__chips"></div>
+      <button id="clear-recents" class="btn btn--ghost" type="button">Clear</button>
+    </section>
   </header>
-
-  <section class="controls">
-    <input type="text" placeholder="Search player...">
-    <select></select>
-    <button>Dark Mode</button>
-  </section>
-
-  <section class="table-container">
-    <table>
-      <thead>
-        <tr>
-          <th>Name</th>
-          <th>Team</th>
-          <th>Points</th>
-          <th>Rebounds</th>
-          <th>Assists</th>
-        </tr>
-      </thead>
-      <tbody></tbody>
-    </table>
-  </section>
-
-  <script src="script.js"></script>
+  <main class="container">
+    <section id="grid" class="grid" aria-live="polite" aria-busy="false"></section>
+    <button id="load-more" class="btn btn--secondary loadmore" type="button" hidden>Load more</button>
+  </main>
+  <dialog id="modal" class="modal">
+    <button id="modal-close" class="btn btn--ghost modal__close" aria-label="Close">✕</button>
+    <img id="modal-img" alt="">
+    <p id="modal-meta"></p>
+  </dialog>
+  <footer class="container footer">
+    <small>Photos courtesy of <a href="https://unsplash.com" target="_blank" rel="noopener">Unsplash</a>.</small>
+  </footer>
 </body>
 </html>
